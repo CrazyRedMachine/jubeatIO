@@ -1,6 +1,7 @@
 /* TO BE COMPILED WITH VISUAL STUDIO SO THAT EXPORTS ARE PROPERLY MANGLED */
 #define _CRT_SECURE_NO_WARNINGS
 #include <Windows.h>
+#include <ctime>
 extern "C" {
 // This file is in the Windows DDK available from Microsoft.
 #include <hidsdi.h>
@@ -109,12 +110,14 @@ static void controller_read_buttons(){
 #ifdef DEBUG
     fprintf(g_logfile,"controller_read_buttons read %x %x %x %x %x\n",buf[0],buf[1],buf[2],buf[3],buf[4]);
 #endif
-    /* HID read ok, convert latest report bytes to pop'n bitfield */
+    /* HID read ok, convert latest report bytes to jubeat bitfield */
     DEVICE_INPUT_STATE = 0;
     dis[0] = buf[BytesRead-4] << 1;
     dis[1] = buf[BytesRead-3] << 1;
-    dis[2] = ((buf[BytesRead-3] >> 7)<<4)|(buf[BytesRead-4] >> 7);
-    dis[3] = buf[BytesRead-2]|((buf[BytesRead-2]>>2)<<4);
+    dis[2] = (buf[BytesRead-4] >> 7);
+    if ((buf[BytesRead-3])&0x80) dis[2] |= 0x10;
+    dis[3] = (buf[BytesRead-2]&0x03);
+    if ((buf[BytesRead-2])&0x04) dis[3] |= 0x10;
 
 #ifdef DEBUG
     for (int i = 0; i<32; i++){
@@ -167,6 +170,26 @@ __declspec(dllexport) void __cdecl device_get_coinstock(unsigned short *coin1, u
     //eamuse_coin_consume_stock();
 }
 
+__declspec(dllexport) void __cdecl device_get_coinstock_all(unsigned short *coin1, unsigned short *coin2) {
+    *coin1 = 0; //(unsigned short) eamuse_coin_get_stock();
+    *coin2 = 0;
+
+    // without this, jubeat will spawn never ending credit inserts
+    //eamuse_coin_consume_stock();
+}
+
+__declspec(dllexport) long __cdecl device_get_input(int a1) {
+    if (a1)
+        return 0;
+    return DEVICE_INPUT_STATE;
+}
+
+__declspec(dllexport) long __cdecl device_get_input_time() {
+    time_t t = std::time(nullptr);
+    auto now = static_cast<long int> (t);
+    return now;
+}
+
 __declspec(dllexport) char __cdecl device_get_dipsw() {
     return 0;
 }
@@ -187,6 +210,10 @@ __declspec(dllexport) int __cdecl device_get_panel_trg_short_on(int a1, int a2, 
     return 0;
 }
 
+__declspec(dllexport) int __cdecl device_get_racecount() {
+    return 0;
+}
+
 __declspec(dllexport) int __cdecl device_get_secplug_error(int a1) {
     return 0;
 }
@@ -194,6 +221,12 @@ __declspec(dllexport) int __cdecl device_get_secplug_error(int a1) {
 __declspec(dllexport) int __cdecl device_get_secplug_hist(int a1, int a2, char *a3) {
     *a3 = 0;
     return 0;
+}
+
+__declspec(dllexport) void __cdecl device_poweroff() {
+}
+
+__declspec(dllexport) void __cdecl device_set_mute() {
 }
 
 __declspec(dllexport) int __cdecl device_get_status() {
@@ -233,8 +266,17 @@ __declspec(dllexport) int __cdecl device_set_coinblocker_open(char number, char 
     return 0;
 }
 
+__declspec(dllexport) void __cdecl device_set_coincounter_controllable() {
+}
+
+__declspec(dllexport) void __cdecl device_set_coincounter_merge() {
+}
+
 __declspec(dllexport) int __cdecl device_set_coincounter_work() {
     return 0;
+}
+
+__declspec(dllexport) void __cdecl device_set_portoutbit() {
 }
 
 __declspec(dllexport) int __cdecl device_set_panel_mode(int mode) {
