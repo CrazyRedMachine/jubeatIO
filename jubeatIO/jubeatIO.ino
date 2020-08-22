@@ -1,7 +1,7 @@
 #define BOUNCE_WITH_PROMPT_DETECTION
 #include <Bounce2.h>
 #include <Joystick.h>
-#define BUTTON_COUNT 18
+#define BUTTON_COUNT 19
 #define BOUNCE_INTERVAL 5
 
 Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID,JOYSTICK_TYPE_GAMEPAD,
@@ -11,7 +11,7 @@ Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID,JOYSTICK_TYPE_GAMEPAD,
   false, false,          // No rudder or throttle
   false, false, false);  // No accelerator, brake, or steering
 
-uint8_t buttonPin[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,A5,A4,A3,A2};
+uint8_t buttonPin[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,A5,A4,A3,A2,A1};
 
 Bounce buttonBounce[BUTTON_COUNT];
 bool buttonState[BUTTON_COUNT];
