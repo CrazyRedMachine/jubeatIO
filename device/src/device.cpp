@@ -213,6 +213,15 @@ __declspec(dllexport) int __cdecl device_get_subboard_version(void *data, unsign
 __declspec(dllexport) int __cdecl device_initialize(int a1, int a2) {
     if (controller_init() == 0)
         DEVICE_INITIALIZED = true;
+    else return -1;
+
+    bool hidres = HidD_SetNumInputBuffers(
+            g_hid_handle,
+            2);
+    if (!hidres)
+    {
+        return -1;
+    }
     return 0;
 }
 
