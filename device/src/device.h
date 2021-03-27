@@ -1,8 +1,8 @@
 #ifndef JUBEATIO_DEVICE_H
 #define JUBEATIO_DEVICE_H
 
-/* Jubeat Knit/Copious has a couple differences, set this value to 1 to make the dll compatible with these games instead */
-#define OLD_FORMAT 0
+/* Jubeat Knit/Copious has a couple differences, uncomment this define to make the dll compatible with these games instead */
+//#define OLD_FORMAT
 
 extern "C" {
 __declspec(dllexport) int __cdecl device_check_secplug(int a1);

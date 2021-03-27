@@ -39,13 +39,19 @@ static int controller_init(){
     file = fopen("devicepath.dat", "r");
     if (file == NULL)
     {
+#ifdef DEBUG
+        fprintf(g_logfile, "No devicepath.dat found.\r\n");
+#endif
         goto last_resort;
     }
 
     while ( fgets(path,256,file) != NULL )
     {
         path[strcspn(path, "\r\n")] = 0;
-        g_hid_handle = CreateFile(path, GENERIC_READ|GENERIC_WRITE, NULL, NULL, OPEN_EXISTING, 0, NULL);
+#ifdef DEBUG
+        fprintf(g_logfile, "Attempting to open %s.\r\n",path);
+#endif
+        g_hid_handle = CreateFile(path, GENERIC_READ|GENERIC_WRITE, FILE_SHARE_READ|FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
         if ( g_hid_handle != INVALID_HANDLE_VALUE )
             break;
     }
@@ -58,8 +64,11 @@ static int controller_init(){
     return 0;
 
     last_resort:
-    g_hid_handle = CreateFile("\\\\?\\HID#VID_1D50&PID_6080#6&119e5a1b&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}",
-                              GENERIC_READ|GENERIC_WRITE, NULL, NULL, OPEN_EXISTING, 0, NULL);
+    #ifdef DEBUG
+            fprintf(g_logfile, "Attempting last resort.\r\n");
+#endif
+    g_hid_handle = CreateFile("\\\\?\\HID#VID_2341&PID_8036&MI_02#8&1c75ef1&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}",
+                              GENERIC_READ|GENERIC_WRITE, FILE_SHARE_READ|FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
     if ( g_hid_handle != INVALID_HANDLE_VALUE )
         return 0;
 #ifdef DEBUG
@@ -94,13 +103,13 @@ static int controller_init(){
 static void controller_read_buttons(){
     DWORD	      BytesRead = 0;
     byte*         dis = (byte *) &DEVICE_INPUT_STATE;
-    unsigned char buf[10]; // gamepad report length is 5 bytes in firmware, doubled because NumInputBuffer is set to 2
+    unsigned char buf[8]; // gamepad report length is 4 bytes in firmware, doubled because NumInputBuffer is set to 2
 
-    buf[0] = 0x00; // gamepad report ID is 0 in firmware
+    buf[0] = 0x03; // gamepad report ID is 3 in firmware
 
-    ReadFile(g_hid_handle, buf, 10, &BytesRead, NULL);
-    // BytesRead should either be 10 (if it successfully read 2 reports) or 5 (only one)
-    if ( BytesRead != 5 && BytesRead != 10)
+    ReadFile(g_hid_handle, buf, 8, &BytesRead, NULL);
+    // BytesRead should either be 8 (if it successfully read 2 reports) or 4 (only one)
+    if ( BytesRead != 4 && BytesRead != 8)
     {
 #ifdef DEBUG
         fprintf(g_logfile,"controller_read_buttons error (%u bytes read)\n",BytesRead);
@@ -112,12 +121,12 @@ static void controller_read_buttons(){
 #endif
     /* HID read ok, convert latest report bytes to jubeat bitfield */
     DEVICE_INPUT_STATE = 0;
-    dis[0] = buf[BytesRead-4] << 1;
-    dis[1] = buf[BytesRead-3] << 1;
-    dis[2] = (buf[BytesRead-4] >> 7);
-    if ((buf[BytesRead-3])&0x80) dis[2] |= 0x10;
-    dis[3] = (buf[BytesRead-2]&0x03);
-    if ((buf[BytesRead-2])&0x04) dis[3] |= 0x10;
+    dis[0] = buf[BytesRead-3] << 1;
+    dis[1] = buf[BytesRead-2] << 1;
+    dis[2] = (buf[BytesRead-3] >> 7);
+    if ((buf[BytesRead-2])&0x80) dis[2] |= 0x10;
+    dis[3] = (buf[BytesRead-1]&0x03);
+    if ((buf[BytesRead-1])&0x04) dis[3] |= 0x10;
 
 #ifdef DEBUG
     for (int i = 0; i<32; i++){
@@ -128,7 +137,7 @@ static void controller_read_buttons(){
     fprintf(g_logfile,"controller_read_buttons ok (pad_bits = %x)\n",DEVICE_INPUT_STATE);
 #endif
 
-#if OLD_FORMAT == 1
+#ifdef OLD_FORMAT
     /* convert to old format */
     dis[3] = (((dis[3] | (dis[3]<<4))&0xF0)|(dis[2]|dis[2]>>2));
     dis[2] = dis[1];
@@ -146,7 +155,7 @@ __declspec(dllexport) int __cdecl device_check_secplug(int a1) {
     // check for invalid index
     if (a1 > 1)
         return 0;
-#if OLD_FORMAT == 1
+#ifdef OLD_FORMAT
         return 0x101 - a1;
 #else
         return 0x100 + a1;
@@ -301,6 +310,8 @@ int __stdcall DllMain(HINSTANCE hinstDLL, DWORD fdwReason, void *) {
         //https://blogs.msdn.microsoft.com/larryosterman/2004/06/03/little-known-win32-apis-disablethreadlibrarycalls/
         DisableThreadLibraryCalls(hinstDLL);
     }
-
+#ifdef DEBUG
+    g_logfile = fopen("device.log","w+");
+#endif
     return 1;
 }
